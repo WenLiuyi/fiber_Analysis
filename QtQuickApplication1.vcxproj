@@ -63,7 +63,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <IncludePath>C:\opencv\build\include;C:\opencv\build\include\opencv2;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <ReferencePath>C:\Users\16584\Documents\Github\xlnt\include\xlnt;$(VC_ReferencesPath_x64);</ReferencePath>
-    <LibraryPath>C:\Users\16584\Documents\Github\xlnt_build\source\Debug;C:\opencv\build\x64\vc16\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>C:\Users\16584\Documents\Github\xlnt_build_Release\source\Release;C:\opencv\build\x64\vc16\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <IncludePath>C:\opencv\build\include;C:\opencv\build\include\opencv2;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
@@ -87,7 +87,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\opencv\build\x64\vc16\lib;D:\Anaconda3\envs\matplotlip_python311\libs</AdditionalLibraryDirectories>
-      <AdditionalDependencies>C:\Users\16584\Documents\Github\xlnt_build\source\Debug\xlntd.lib;C:\opencv\build\x64\vc16\lib\opencv_world4100.lib;D:\Anaconda3\envs\matplotlip_python311\libs\python3.lib;D:\Anaconda3\envs\matplotlip_python311\libs\python311.lib;D:\Anaconda3\envs\matplotlip_python311\libs\_tkinter.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Users\16584\Documents\Github\xlnt_build_Release\source\Release\xlnt.lib;C:\opencv\build\x64\vc16\lib\opencv_world4100.lib;D:\Anaconda3\envs\matplotlip_python311\libs\python3.lib;D:\Anaconda3\envs\matplotlip_python311\libs\python311.lib;D:\Anaconda3\envs\matplotlip_python311\libs\_tkinter.lib;$(CoreLibraryDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">

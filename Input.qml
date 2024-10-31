@@ -60,7 +60,6 @@ ColumnLayout{
             text:"Start"
             font.pixelSize: 16
             onClicked:{
-                let inputs=[resolutionInput.text,thresholdInput.text,ssimInput.text];
                 let allValid=true;
 
                 if(!isDouble(resolutionInput.text)){
@@ -90,7 +89,10 @@ ColumnLayout{
                     inputBorder_4.border.color="lightgray";
                 }
 
-                if(allValid) runner.run();   // 调用Runner的run方法
+                if(allValid) {
+                    let inputs=[resolutionInput.text,thresholdInput.text,ssimInput.text,iternumInput.text];
+                    runner.start(inputs);
+                }
             }
         }Connections{
             target:runner
@@ -165,7 +167,7 @@ ColumnLayout{
                     onCurrentFolderChanged: {
                         folderListModel.folder=currentFolder
                         folderManager.curFolder=currentFolder       // 目录树路径
-                        folderManager.pictureFolder=currentFolder   // 图片路径
+                        folderManager.baseFolder=currentFolder   // 图片路径
                     }
                 }
             }
@@ -210,7 +212,7 @@ ColumnLayout{
                     onCurrentFolderChanged: {
                         folderListModel.folder=currentFolder
                         folderManager.curFolder=currentFolder       // 目录树路径
-                        folderManager.pictureFolder=currentFolder   // 输出路径
+                        folderManager.resultFolder=currentFolder   // 输出路径
                     }
                 }
             }

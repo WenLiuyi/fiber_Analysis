@@ -1,4 +1,5 @@
 #include "Runner.h"
+#include "FolderManager.h"
 
 #include <iostream>
 #include <opencv.hpp>
@@ -34,14 +35,9 @@ vector<vector<Point>> extractClusters(vector<vector<Point>>& clusters, vector<in
 
 double calculate_length_of_contour(const Mat& img);
 
-std::string baseFolder = "C:\\Users\\16584\\Desktop\\pictures";
-std::string resultFolder = "C:\\Users\\16584\\Desktop\\result_pictures";
+std::string baseFolder = "";
+std::string resultFolder = "";
 
-
-void Runner::run() {
-    QString result = performTask();
-    emit finished(result); // 发射信号，告知 QML 任务完成
-}
 
 QString Runner::performTask() {
     // 模拟一些任务，替代 run.cpp 中的逻辑
@@ -60,11 +56,30 @@ QString Runner::performTask() {
     //int iteration_num;
     //std::cin >> resolution >> threshold >> ssim >> iteration_num;
 
+    // 输出属性值
+    qDebug() << "Resolution:" << resolution;
+    qDebug() << "Threshold:" << threshold;
+    qDebug() << "SSIM:" << ssim;
+    qDebug() << "Iteration Number:" << iteration_num;
+
+    QString baseFolder_qstring = m_folderManager->baseFolder();
+    baseFolder = baseFolder_qstring.toStdString().substr(8);
+    QString resultFolder_qstring = m_folderManager->resultFolder();
+    resultFolder = resultFolder_qstring.toStdString().substr(8);
+
+    qDebug() << "baseFolder:" << baseFolder;
+    qDebug() << "resultFolder:" << resultFolder;
+
     createDirectories(resultFolder);
 
     //对文件夹里的每张图片进行遍历：
     try {
         for (const auto& entry : fs::directory_iterator(baseFolder)) {
+            if (!fs::is_regular_file(entry.status())) continue;
+
+            std::string extension = entry.path().extension().string();
+            if (extension != ".png" && extension != ".jpg" && extension != ".jpeg") continue;
+
             std::string filename = entry.path().filename().string();
             std::cout << filename << std::endl;
             std::cout << "开始单张图片分割处理" << std::endl;
@@ -415,3 +430,35 @@ double calculate_length_of_contour(const Mat& img) {
     return 0.0;
 }
 
+void Runner::start(const QStringList& inputs) {
+
+    if (inputs.size() < 4) {
+        qWarning() << "Insufficient input values.";
+        return;
+    }
+
+    // 将输入数据转为浮点数并存储
+    bool ok;
+    resolution = inputs[0].toDouble(&ok);
+    if (!ok) {
+        qWarning() << "Invalid resolution value:" << inputs[0];
+    }
+
+    threshold = inputs[1].toDouble(&ok);
+    if (!ok) {
+        qWarning() << "Invalid threshold value:" << inputs[1];
+    }
+
+    ssim = inputs[2].toDouble(&ok);
+    if (!ok) {
+        qWarning() << "Invalid ssim value:" << inputs[2];
+    }
+
+    iteration_num = inputs[3].toInt(&ok);
+    if (!ok) {
+        qWarning() << "Invalid iternum value:" << inputs[3];
+    }
+
+    QString result = performTask();
+    emit finished(result); // 发射信号，告知 QML 任务完成
+}

@@ -9,7 +9,7 @@ Window {
     width: 1280
     height: 720
     visible: true
-    //title: qsTr("单丝截面分割")
+    title: qsTr("单丝截面分割")
 
     property int curSelected: -1
     property string curPath:""

@@ -18,11 +18,12 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     qmlRegisterType<File>("MyFile", 1, 0, "File");
 
-    Runner runner;  // 创建 Runner 实例
-    engine.rootContext()->setContextProperty("runner", &runner);  // 注册到 QML
+    FolderManager folderManager;
+    engine.rootContext()->setContextProperty("folderManager", &folderManager);
 
-    FolderManager* folderManager = new FolderManager();
-    engine.rootContext()->setContextProperty("folderManager", folderManager);
+    Runner runner(&folderManager);  // 传递folderManage实例到Runner
+    engine.rootContext()->setContextProperty("runner", &runner);
+
 
     engine.load(QUrl(QStringLiteral("qrc:/qt/qml/qtquickapplication1/main.qml")));
     if (engine.rootObjects().isEmpty())
