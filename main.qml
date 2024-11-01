@@ -118,10 +118,11 @@ Window {
                                         if(fileName.endsWith('.txt')){
                                             file.source=folderPath.toString().slice(8)
                                             openText=true;openPic=false;openExcel=false
-                                        }else if(file.endsWith('.xlsx')){
+                                        }else if(fileName.endsWith('.xlsx')){
 
-                                        }else if(file.endsWith('.png')||file.endsWith('.jpg')){
-
+                                        }else if(fileName.endsWith('.png')||file.endsWith('.jpg')){
+                                            imageViewer.source = folderPath
+                                            openText=false;openPic=true;openExcel=false
                                         }
 
                                         console.log("这不是一个文件夹: " + fileName)
@@ -157,7 +158,7 @@ Window {
                             TextArea {
                                 id: textArea_3
                                 visible:openText
-                                width: 672  // 设置输入框宽度超过 ScrollView 的宽度
+                                width: 672  
                                 height: parent.height
                                 text:file.text
 
@@ -169,19 +170,64 @@ Window {
                                     radius: 3
                                 }
                             }
+                            Image{
+                                id:imageViewer
+                                fillMode: Image.PreserveAspectFit
+                                visible:openPic
+                                width: 672
+                                source:""
+                            }
                         }
                     }
                     Rectangle{      // 工作区栏
                         anchors.top:parent.top
-                        color: "lightpink";
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+
+                        ScrollView{
+                            id:commandScroll
+                            width:parent.width;height:parent.height
+
+                            TextArea{
+                            id:paramsArea
+                            anchors.fill: parent
+                            height: parent.height
+                            readOnly: true
+
+                            background: Rectangle {
+                                border.color: "#B0B0B0"
+                                radius: 3
+                            }
+                        }
+                        }
+                        
+                        
                     }
                 }
                 Rectangle{      // 命令行栏
                     color: "lightskyblue";
                     Layout.fillWidth: true
                     Layout.preferredHeight: 230
+
+                    TextArea{
+                        id:logArea
+                        anchors.fill: parent
+                        readOnly: true
+
+                        background: Rectangle {
+                            border.color: "#B0B0B0"
+                            radius: 3
+                        }
+                    }
+                    Connections{
+                        target:runner
+                        onMessageChanged:{           // 连接runner的update
+                            console.log("hello")
+                            console.log(runner.message)
+                            logArea.text += runner.message + "\n";
+                            //logArea.scrollToBottom();
+                        }
+                    }
                 }
             }
         }

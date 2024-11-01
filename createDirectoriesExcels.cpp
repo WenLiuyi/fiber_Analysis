@@ -13,7 +13,7 @@ namespace fs = std::filesystem;
 void createDirectories(const std::string& baseFolder) {    //baseFolder为根目录，name为原图的命名
     std::vector<std::string> subFolders = {
         "", "/pre", "/final", "/pre/cluster_0","/pre/cluster_255","/pre/contour_0","/pre/contour_255","/pre/pixel inverse","/pre/histogram",
-        "/pre/dyed","/pre/segment","/pre/dyed_segment",
+        "/pre/dyed","/pre/segment","/pre/dyed_segment","/pre/processed"
         "/final/cir", "/final/cluster", "/final/segment", "/final/segment contour", "/final/segment contour/ellipse fit", "/final/result"
     };
 

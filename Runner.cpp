@@ -19,6 +19,8 @@
 #include "createDirectoriesExcels.h"
 #include "kmeans.h"
 
+#include<QString>
+
 using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
@@ -37,6 +39,21 @@ double calculate_length_of_contour(const Mat& img);
 
 std::string baseFolder = "";
 std::string resultFolder = "";
+
+QString Runner::getMessage() const {
+    return m_message;
+}
+
+void Runner::setMessage(const QString& message) {
+    qDebug() << "------setMessage";
+    //m_message=message;
+    emit updateLog(m_message);
+}
+
+void Runner::updateLog(const QString& message) {
+    m_message = message;
+    emit messageChanged();
+}
 
 
 QString Runner::performTask() {
@@ -81,8 +98,10 @@ QString Runner::performTask() {
             if (extension != ".png" && extension != ".jpg" && extension != ".jpeg") continue;
 
             std::string filename = entry.path().filename().string();
-            std::cout << filename << std::endl;
-            std::cout << "开始单张图片分割处理" << std::endl;
+            //std::cout << filename << std::endl;
+            //std::cout << "开始图片"<<filename<<"的分割处理:" << std::endl;
+            QString message_1 = QString("开始图片 %1 的分割处理:").arg(QString::fromStdString(filename));  // Note1
+            updateLog(message_1);
 
             std::string name = filename.substr(0, filename.find_last_of('.'));
             string diameter_excelPath = resultFolder + "\\final\\Equivalent Diameters Table.xlsx";
@@ -93,6 +112,7 @@ QString Runner::performTask() {
             // 创建保存圆度计算数据的excel表："对应聚类类型", "面积周长特征比", "短长半轴比", "相对偏心距", "直径短边短边比", "直径长边比"
             //createExcelFile(resultFolder + "\\final\\Crosss Section Roundness Table.xlsx", { "Cluster Type", "S/L", "a/b", "d/D", "2R/A", "2R/B" });
             createExcelFile(roundness_excelPath, { "Cluster Type", "S/L", "a/b", "d/D", "2R/A", "2R/B" });
+
 
             // 2.图像预处理
             string path = baseFolder + "\\" + filename;
@@ -115,6 +135,8 @@ QString Runner::performTask() {
             cv::threshold(grayImg, binaryImg, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU); //OTSU二值化
             cv::imwrite(resultFolder + "\\pre\\processed\\" + name + "_binary.png", binaryImg);       //保存二值化图像
 
+            QString message_2 = QString("1. 图像预处理完成，输出二值化图像 %1 ").arg(QString::fromStdString(name+ "_binary.png"));  // Note2
+            updateLog(message_2);
 
             //3. 单丝初分割及结果可视化
 
@@ -140,6 +162,7 @@ QString Runner::performTask() {
             vector<double> list_0= processClusters(clusters_0, name, height, width,0);
 
 
+
             /*我们总是希望纤维对应像素二值化的结果为255，树脂、孔隙对应像素二值化结果为0.
          * 但由于拍摄条件影响，有时会出现树脂、孔隙对应像素二值化结果为255，纤维对应像素二值化的结果为0
          * 下面的判据就是为了消除这种影响，根据轮廓周长进行判断，基于树脂、孔隙对应轮廓周长总是大于纤维最大轮廓周长，若max(list_255) > max(list_0)
@@ -154,13 +177,24 @@ QString Runner::performTask() {
             // 3.3 初分割结果可视化：聚类所含像素点数目分布直方图， 聚类染色图
             // （滤去所含像素点少的聚类）
             vector<vector<Point>> filtered_clusters=visualize(clusters_255, resultFolder, name, resolution, height, width);
+            
+            QString message_3 = QString("2. 初分割聚类完成，初始聚类数目为%1，过滤后聚类数目为%2，输出聚类图至文件夹 %3，输出轮廓图至文件夹 %4 ")
+                .arg(QString::number(clusters_255.size())).arg(QString::number(filtered_clusters.size())
+                .arg(QString::fromStdString("/pre/cluster")).arg(QString::fromStdString("/pre/contour")));  // Note2
+            updateLog(message_3);
 
             // 3.4 预分割的图像处理前后效果比较，获取SSIM指数
             ouputSSIMResult(resultFolder+"\\pre\\processed\\"+name+"_binary.png", resultFolder + "\\pre\\segment\\" + name + "_segment.png", resultFolder, name, false);
 
-            //4. 再分割单丝分割阈值确定
+            QString message_4 = QString("3. 初分割聚类结果可视化，输出聚类染色图至 %1").arg(QString::fromStdString("/pre/dyed_segment"));  // Note3
+            updateLog(message_4);
+
+        //4. 再分割单丝分割阈值确定
             double max_x=saveKde(filtered_clusters);             //max_x拟合曲线极值点所对应的聚类所含的像素点数目
             cout << "获取高斯核图极值点，作为再分割单丝的分割阈值" << endl;
+
+            QString message_5 = QString("4. 获取高斯核图极值点，作为再分割单丝的分割阈值");  // Note3
+            updateLog(message_5);
 
             //5. 单丝再分割
             vector<int> repair_first_klist, repair_second_klist, redundant_list; // 存储需要修复的聚类索引（第一次/第二次修正）
@@ -169,12 +203,19 @@ QString Runner::performTask() {
             int circle_count = 100;
             reSplit(filtered_clusters, threshold, circle_count, max_x, ssim, resolution, height, width, resultFolder, name, &repair_first_klist, &diameter_list, &percentage_list, false);
 
+            QString message_6 = QString("5. 初次单丝再分割完整，待修正的聚类数为%1：").arg(QString::number(repair_first_klist.size()));  // Note3
+            updateLog(message_6);
+
             //6. 单丝再分割过程修正
             vector<vector<Point>>clusters_k_repair = deepcopyClusters(filtered_clusters);
             vector<vector<Point>>clusters_kk_repair = deepcopyClusters(filtered_clusters);
 
             // 6.1 第一次再分割修正
             // 针对第一类错误：聚类数目split number正确，但因为k近邻方法所含随机性导致初始聚类中心选的不合适
+
+            QString message_7 = QString("6. 开始第一次再分割修正");  // Note3
+            updateLog(message_7);
+
             int len = repair_first_klist.size();
             cout << "第一次修正的初分割聚类数为：" << len << endl;
             vector<vector<Point>> extractedClusters_1 = extractClusters(filtered_clusters, &repair_first_klist);
@@ -189,6 +230,10 @@ QString Runner::performTask() {
                 // 2. 判断结构相似性指数列表中的最大值，是否大于ssim阈值；
                 // 若满足，修正过程结束，保存结果；若不满足，需要第二次修正。
                 cout << "开始进入聚类" << to_string(repair_first_klist[d]) << "的第一次修正：" << endl;
+
+                QString message_8 = QString("聚类%1 的第一次修正").arg(QString::number(repair_first_klist[d]));  // Note3
+                updateLog(message_8);
+
                 for (int i = 0; i < iteration_num; i++) {
                     cout << "iteration_" << to_string(i) << endl;
                     int split_number = static_cast<int>(filtered_clusters[repair_first_klist[d]].size() / (1.5 * max_x * threshold)) + 1;
@@ -202,6 +247,10 @@ QString Runner::performTask() {
 
             // 6.2 第二次再分割修正
             // 针对第二类错误，即聚类数目split_number的错误
+
+            QString message_9 = QString("7. 开始第二次修正，待第二次修正的初分割聚类数为%1：").arg(QString::number(repair_second_klist.size()));  // Note3
+            updateLog(message_9);
+
             cout << "第二次修正的初分割聚类数为：" << repair_second_klist.size() << endl;
             len = repair_second_klist.size();
             vector<vector<Point>> extractedClusters_2 = extractClusters(filtered_clusters, &repair_second_klist);
@@ -212,6 +261,8 @@ QString Runner::performTask() {
                 //deletePictures(resultFolder, name, repair_second_klist[d]);
 
                 cout << "开始进入聚类" << to_string(repair_second_klist[d]) << "的第二次修正：" << endl;
+
+                
                 while (1) {
                     for (int i = 0; i < iteration_num; i++) {
                         bool res = ClusterDivide(repair_second_klist[d], split_number, extractedClusters_2[d], resolution, threshold, ssim, max_x, circle_count,
@@ -224,6 +275,9 @@ QString Runner::performTask() {
                     cout << "split_number: " << to_string(split_number) << endl;
                 }
                 cout << "聚类" << to_string(repair_second_klist[d]) << "的子聚类数目："<< to_string(split_number) << endl;
+
+                QString message_10 = QString("聚类%1 的第二次修正，修正后子聚类数目为：%2").arg(QString::number(repair_second_klist[d])).arg(QString::number(split_number));  // Note3
+                updateLog(message_10);
             }
 
             //7. 单丝最终分割的结果可视化
@@ -395,7 +449,7 @@ vector<double> processClusters(vector<vector<Point>>& clusters, const string& na
                 img_single_rgb.at<cv::Vec3b>(point) = cv::Vec3b(255, 255, 255);
             }
 
-            //单个初分割聚类染色图
+            //单个初分割聚类图
             //string path1 = resultFolder + "\\pre\\cluster\\" + name + "_cluster_" + std::to_string(NUM) + "_cnt_" + std::to_string(F) + ".png";
             //cout << path1 << endl;
             cv::imwrite(resultFolder + "\\pre\\cluster_" + to_string(pixel)+"\\" + name + "_cluster_" + to_string(NUM) + "_cnt_" + to_string(F) + ".png", img_single_rgb);

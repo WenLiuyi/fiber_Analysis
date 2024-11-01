@@ -9,10 +9,16 @@
 #include <iomanip>
 #include "visualize.h"
 
+#include <QString>
+#include "Runner.h"
+#include "FolderManager.h"
+
 using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
 constexpr double PI = 3.14159265358979323846;       //编译时计算的常量
+
+QString message;
 
 //std::string resultFolder = "C:\\Users\\16584\\Desktop\\result_pictures";
 
@@ -172,6 +178,8 @@ void visualizeClusters(const vector<vector<Point>>& clusters1, size_t count, int
 
     // 4. 保存所有聚类的图像和输出信息
     imwrite(resultFolder + +"\\pre\\dyed_segment\\" + name + "_pre_segment" + ".png", img_rgb);
+
+
     cout << "获得纤维预分割聚类染色图" << endl;
 }
 
