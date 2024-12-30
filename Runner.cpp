@@ -1,3 +1,6 @@
+#define NOMINMAX  // 禁用 min 和 max 宏
+#include <algorithm>  // 确保标准库的 min/max 不被宏替代
+
 #include "Runner.h"
 #include "FolderManager.h"
 
@@ -15,11 +18,13 @@
 #include <wchar.h>
 #include <windows.h>
 
+
 #include "visualize.h"
 #include "createDirectoriesExcels.h"
 #include "kmeans.h"
 
 #include<QString>
+#include <matplot/matplot.h>
 
 using namespace std;
 using namespace cv;
@@ -110,9 +115,8 @@ QString Runner::performTask() {
             createExcelFile(diameter_excelPath, { "Cluster Type", "Equivalent Diameter(micrometer)" });
 
             // 创建保存圆度计算数据的excel表："对应聚类类型", "面积周长特征比", "短长半轴比", "相对偏心距", "直径短边短边比", "直径长边比"
-            //createExcelFile(resultFolder + "\\final\\Crosss Section Roundness Table.xlsx", { "Cluster Type", "S/L", "a/b", "d/D", "2R/A", "2R/B" });
             createExcelFile(roundness_excelPath, { "Cluster Type", "S/L", "a/b", "d/D", "2R/A", "2R/B" });
-
+            
 
             // 2.图像预处理
             string path = baseFolder + "\\" + filename;
@@ -137,7 +141,7 @@ QString Runner::performTask() {
 
             QString message_2 = QString("1. 图像预处理完成，输出二值化图像 %1 ").arg(QString::fromStdString(name+ "_binary.png"));  // Note2
             updateLog(message_2);
-
+            
             //3. 单丝初分割及结果可视化
 
             // 3.1 图像像素矩阵获取
@@ -160,7 +164,7 @@ QString Runner::performTask() {
             //list_255:像素值为255的初分割聚类的轮廓周长;list_0:像素值为0的初分割聚类的轮廓周长
             vector<double> list_255= processClusters(clusters_255, name, height, width,255);
             vector<double> list_0= processClusters(clusters_0, name, height, width,0);
-
+            
 
 
             /*我们总是希望纤维对应像素二值化的结果为255，树脂、孔隙对应像素二值化结果为0.
@@ -168,6 +172,7 @@ QString Runner::performTask() {
          * 下面的判据就是为了消除这种影响，根据轮廓周长进行判断，基于树脂、孔隙对应轮廓周长总是大于纤维最大轮廓周长，若max(list_255) > max(list_0)
          * 则(list_0)对应是纤维的信息，需要对图像进行像素反转
          */
+            
             Mat matrix_1;
             bool judge=pixel_inverse(list_255, list_0, grayImg, name,height,width, matrix_1);
             if (judge) {
@@ -178,9 +183,8 @@ QString Runner::performTask() {
             // （滤去所含像素点少的聚类）
             vector<vector<Point>> filtered_clusters=visualize(clusters_255, resultFolder, name, resolution, height, width);
             
-            QString message_3 = QString("2. 初分割聚类完成，初始聚类数目为%1，过滤后聚类数目为%2，输出聚类图至文件夹 %3，输出轮廓图至文件夹 %4 ")
-                .arg(QString::number(clusters_255.size())).arg(QString::number(filtered_clusters.size())
-                .arg(QString::fromStdString("/pre/cluster")).arg(QString::fromStdString("/pre/contour")));  // Note2
+            QString message_3 = QString("2. 初分割聚类完成，初始聚类数目为%1，过滤后聚类数目为%2，输出聚类图至文件夹 /pre/cluster，输出轮廓图至文件夹/pre/contour ")
+                .arg(QString::number(clusters_255.size())).arg(QString::number(filtered_clusters.size()));
             updateLog(message_3);
 
             // 3.4 预分割的图像处理前后效果比较，获取SSIM指数
@@ -188,21 +192,21 @@ QString Runner::performTask() {
 
             QString message_4 = QString("3. 初分割聚类结果可视化，输出聚类染色图至 %1").arg(QString::fromStdString("/pre/dyed_segment"));  // Note3
             updateLog(message_4);
-
+            
         //4. 再分割单丝分割阈值确定
-            double max_x=saveKde(filtered_clusters);             //max_x拟合曲线极值点所对应的聚类所含的像素点数目
+            double max_x=saveKde(filtered_clusters, resultFolder + "\\pre\\histogram\\" + name + "_kde.png");             //max_x拟合曲线极值点所对应的聚类所含的像素点数目
             cout << "获取高斯核图极值点，作为再分割单丝的分割阈值" << endl;
 
             QString message_5 = QString("4. 获取高斯核图极值点，作为再分割单丝的分割阈值");  // Note3
             updateLog(message_5);
-
+            
             //5. 单丝再分割
             vector<int> repair_first_klist, repair_second_klist, redundant_list; // 存储需要修复的聚类索引（第一次/第二次修正）
             vector<double> diameter_list; // 存储直径
             vector<double> percentage_list; // 储存第一次修正过程中，处理的结构相似性指数
             int circle_count = 100;
             reSplit(filtered_clusters, threshold, circle_count, max_x, ssim, resolution, height, width, resultFolder, name, &repair_first_klist, &diameter_list, &percentage_list, false);
-
+            
             QString message_6 = QString("5. 初次单丝再分割完整，待修正的聚类数为%1：").arg(QString::number(repair_first_klist.size()));  // Note3
             updateLog(message_6);
 
@@ -247,38 +251,22 @@ QString Runner::performTask() {
 
             // 6.2 第二次再分割修正
             // 针对第二类错误，即聚类数目split_number的错误
-
+            
             QString message_9 = QString("7. 开始第二次修正，待第二次修正的初分割聚类数为%1：").arg(QString::number(repair_second_klist.size()));  // Note3
             updateLog(message_9);
-
-            cout << "第二次修正的初分割聚类数为：" << repair_second_klist.size() << endl;
-            len = repair_second_klist.size();
+            
             vector<vector<Point>> extractedClusters_2 = extractClusters(filtered_clusters, &repair_second_klist);
-            for (int d = 0; d < len; d++) {
-                int split_number = static_cast<int>(filtered_clusters[repair_second_klist[d]].size() / (1.5 * max_x * threshold)) + 1;
-                bool need_second_revise = true;
+            vector<QString> logMessages = parallel_second_repair(repair_second_klist, filtered_clusters, max_x,
+                extractedClusters_2,height,width,resultFolder,name,redundant_list,diameter_list,percentage_list,
+                threshold,iteration_num,resolution,ssim,circle_count);
 
-                //deletePictures(resultFolder, name, repair_second_klist[d]);
-
-                cout << "开始进入聚类" << to_string(repair_second_klist[d]) << "的第二次修正：" << endl;
-
-                
-                while (1) {
-                    for (int i = 0; i < iteration_num; i++) {
-                        bool res = ClusterDivide(repair_second_klist[d], split_number, extractedClusters_2[d], resolution, threshold, ssim, max_x, circle_count,
-                                                 height, width, resultFolder, name, &redundant_list, &diameter_list, &percentage_list, true);
-                        if (res == false) { need_second_revise = false; break; }
-                        //else deletePictures(resultFolder, name, repair_second_klist[d]);
-                    }
-                    if (need_second_revise == false) break;
-                    else split_number += 1;
-                    cout << "split_number: " << to_string(split_number) << endl;
-                }
-                cout << "聚类" << to_string(repair_second_klist[d]) << "的子聚类数目："<< to_string(split_number) << endl;
-
-                QString message_10 = QString("聚类%1 的第二次修正，修正后子聚类数目为：%2").arg(QString::number(repair_second_klist[d])).arg(QString::number(split_number));  // Note3
-                updateLog(message_10);
+            // 输出日志
+            for (QString& message : logMessages) {
+                updateLog(message);
             }
+                
+            // 在所有线程完成后将所有线程局部日志合并到一个全局容器
+            //logMessages.push_back(logMessages.end(), localLogMessages.begin(), localLogMessages.end());
 
             //7. 单丝最终分割的结果可视化
             // 对单个染色和无染色的聚类图像进行合并，并保存合并图像
@@ -310,8 +298,18 @@ QString Runner::performTask() {
             //8. 单丝统计参量计算
             // 8.1 单丝等效直径
             //单丝等效直径直方图（待补充）
-            string diameter_filePath = resultFolder + "\\" + name + "_fiberDiameterData.txt";
-            save_diameter_info(diameter_filePath, diameter_excelPath, diameter_list, repair_first_klist);
+            string diameter_filePath = resultFolder + "\\final\\diameter texts\\" + name + "_fiberDiameterData.txt";
+            string diameter_imgPath= resultFolder + "\\final\\diameter images\\" + name + "_fiberDiameterImg.png";
+
+            string roundness_filePath = resultFolder + "\\final\\roundness texts\\" + name + "_fiberRoundnessData.txt";
+
+            // 保存直径直方图
+            save_diameter_info(name, diameter_filePath, diameter_excelPath, diameter_imgPath, diameter_list, repair_first_klist);
+            save_roundness_info(name, roundness_filePath, roundness_excelPath, resultFolder, resultFolder + "\\final\\cir");
+
+            QString message_10 = QString("8. 开始单丝统计参量计算，等效直径数据输出至/final/diameter images，/final/diameter texts，/final/Equivalent Diameters Table.xlsx ；"
+                "圆度参数数据输出至/final/roundness images，/final/roundness texts，/final/Cross Section Roundness Table.xlsx");  // Note3
+            updateLog(message_10);
         }
     }catch (const fs::filesystem_error& e) {
         cerr << "Filesystem error: " << e.what() << endl;

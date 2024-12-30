@@ -6,6 +6,13 @@
 #include <fstream>
 #include<numeric>
 
+#include<QString>
+
+#include <tbb/blocked_range.h>
+#include<tbb/parallel_for.h>
+#include<atomic>
+#include <tbb/concurrent_vector.h>
+
 #include "kmeans.h"
 #include "visualize.h"
 
@@ -77,7 +84,7 @@ bool ClusterDivide(int clusterID, int split_number, vector<Point>& cluster,doubl
             double min_distance = *min_element(distance_list.begin(), distance_list.end());
             vector<int> distance_indexes;       //储存距离最近的聚类序号
 
-            for (size_t M = 0; M < distance_list.size(); ++M) {
+            for (int M = 0; M < distance_list.size(); ++M) {
                 if (distance_list[M] == min_distance) {
                     distance_indexes.push_back(M); // 找到最近的聚类索引
                 }
@@ -138,21 +145,38 @@ bool reSplit(vector<vector<Point>>& clusters, double threshold, int circle_count
              int height, int width, string resultFolder, string name,
              vector<int>* repair_klist, vector<double>* diameter_list, vector<double>* percentage_list, bool revised) {
     //参数：clusters 是初分割后的聚类列表. threshold是再分割阈值, iteration_num是最大迭代次数
-    bool need_revise=false;
+    //bool need_revise=false;
 
     //vector<int> repair_klist; // 需要修正聚类序号指标列表
     //vector<double> diameter_list; // 聚类直径列表
     //vector<int> diameter_num_list; // 聚类直径列表直径对应聚类对应序号
 
-    int count = clusters.size();        //聚类数目
+    size_t count = clusters.size();        //聚类数目
+
+    std::atomic<bool> need_revise(false); // 使用原子变量来确保线程安全的更新
+
+    // 使用TBB的并行for循环来处理每个聚类
+    tbb::parallel_for(tbb::blocked_range<int>(0, count), [&](const tbb::blocked_range<int>& r) {
+        for (int d = r.begin(); d != r.end(); ++d) {
+            int split_number = static_cast<int>(clusters[d].size() / (1.5 * max_x * threshold)) + 1;
+            bool res = ClusterDivide(d, split_number, clusters[d], resolution, threshold, ssim, max_x, circle_count,
+                height, width, resultFolder, name, repair_klist, diameter_list, percentage_list, revised);
+            // 使用原子操作来更新need_revise
+            if (res) {
+                need_revise.store(true); // 设置为true是线程安全的
+                // 注意：一旦设置为true，后续的操作就不会再改变它（假设我们不需要撤销这个设置）
+            }
+        }
+        });
 
     // 对每个初分割聚类内部，进行再分割处理（其再分割聚类数spint_number由初分割聚类像素点数目、再分割单丝阈值共同决定）
-    for (int d = 0; d < count; ++d) {
+    /*for (int d = 0; d < count; ++d) {
         int split_number = static_cast<int>(clusters[d].size() / (1.5 * max_x * threshold)) + 1;
         bool res = ClusterDivide(d, split_number, clusters[d], resolution, threshold, ssim, max_x, circle_count,
                                  height, width, resultFolder, name, repair_klist, diameter_list, percentage_list, revised);
         if (res) need_revise = true;
-    }
+    }*/
+
     return need_revise;     // 是否需要修正
 }
 
@@ -282,3 +306,64 @@ vector<vector<vector<Point>>> deepcopyClustersList(vector<vector<vector<Point>>>
     return new_clusters_list;
 
 }
+
+vector<QString> parallel_second_repair(
+    vector<int> repair_second_klist,
+    vector<vector<Point>> filtered_clusters,
+    double max_x,
+    vector<vector<Point>> extractedClusters_2,
+    int height,
+    int width,
+    string resultFolder,
+    string name,
+    vector<int> redundant_list,
+    vector<double> diameter_list,
+    vector<double> percentage_list,
+    double threshold,
+    int iteration_num,
+    double resolution,
+    double ssim,
+    int circle_count)
+{
+    size_t len = repair_second_klist.size();
+    vector<QString> logMessages;
+
+    // 使用 tbb::parallel_for 来并行执行每个聚类的处理
+    tbb::parallel_for(tbb::blocked_range<int>(0, len), [&](const tbb::blocked_range<int>& r) {
+        tbb::concurrent_vector<std::string> localLogMessages;  // 局部日志存储
+
+        for (int d = r.begin(); d != r.end(); ++d) {
+            int local_split_number = static_cast<int>(filtered_clusters[repair_second_klist[d]].size() / (1.5 * max_x * threshold)) + 1;
+            bool local_need_second_revise = true;
+
+            while (local_need_second_revise) {
+                bool res = true; // 假设初始结果为 true，实际应根据 ClusterDivide 的返回值设置
+                for (int i = 0; i < iteration_num; i++) {
+                    bool res = ClusterDivide(repair_second_klist[d], local_split_number, extractedClusters_2[d], resolution, threshold, ssim, max_x, circle_count,
+                        height, width, resultFolder, name, &redundant_list, &diameter_list, &percentage_list, true);
+                    if (!res) {
+                        local_need_second_revise = false;
+                        break;
+                    }
+                }
+                if (local_need_second_revise) {
+                    local_split_number += 1;
+                }
+            }
+
+            // 收集线程局部日志
+            std::ostringstream oss;
+            oss << "聚类" << repair_second_klist[d] << "的第二次修正，修正后子聚类数目为：" << local_split_number;
+            localLogMessages.push_back(oss.str());
+        }
+
+        // 将局部日志逐条添加到全局日志中
+        for (const auto& log : localLogMessages) {
+            logMessages.push_back(QString::fromStdString(log));
+        }
+        });
+
+    return logMessages;
+}
+
+

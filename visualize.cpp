@@ -1,4 +1,8 @@
+#undef ACCESS_MASK
+
 #include <opencv.hpp>
+#include <matplot/matplot.h>
+
 #include <random>
 #include<iostream>
 #include<vector>
@@ -13,127 +17,158 @@
 #include "Runner.h"
 #include "FolderManager.h"
 
+//#include "matplotlibcpp.h"
+//#include <Python.h>
+
+
+#undef emit
+
 using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
-constexpr double PI = 3.14159265358979323846;       //编译时计算的常量
+using namespace matplot;
+//constexpr double PI = 3.14159265358979323846;       //编译时计算的常量
 
 QString message;
 
 //std::string resultFolder = "C:\\Users\\16584\\Desktop\\result_pictures";
 
-// 定义高斯核函数
-double gauss(double x) {
-    return (1.0 / sqrt(2 * PI)) * exp(-0.5 * (x * x));
-}
-double get_kde(double x, vector<double>& data_array, double bandwidth) {
-    int N = data_array.size();
-    double res = 0.0;
+// 函数：将路径中的反斜杠转为正斜杠
+string convertPath(const string& path) {
+    string convertedPath = path;
 
-    for (double val : data_array) {
-        res += gauss((x - val) / bandwidth);
+    // 替换所有的反斜杠为正斜杠
+    for (char& c : convertedPath) {
+        if (c == '\\') {
+            c = '/';
+        }
+    }
+
+    return convertedPath;
+}
+
+// 高斯核函数计算
+double gauss(double x) {
+    return (1.0 / std::sqrt(2 * M_PI)) * std::exp(-0.5 * x * x);
+}
+// 核密度估计函数
+double getKde(double x, const vector<int>& data_array, double bandwidth) {
+    double res = 0.0;
+    size_t N = data_array.size();
+    for (size_t i = 0; i < N; ++i) {
+        res += gauss((x - data_array[i]) / bandwidth);
     }
     res /= (N * bandwidth);
     return res;
 }
-double saveKde(vector<vector<Point>>& clusters) {           //传回max_x：max_x拟合曲线极值点所对应的聚类所含的像素点数目
-    vector<double> cluster_set; // 用于储存初分割聚类所含的像素点个数的列表
+double saveKde(vector<vector<Point>>& clusters, const string& filename) {           //传回max_x：max_x拟合曲线极值点所对应的聚类所含的像素点数目
+    // 1. 获取每个聚类的大小
+    vector<int> cluster_sizes;      // 用于储存初分割聚类所含的像素点个数的列表
     for (const auto& cluster : clusters) {
-        cluster_set.push_back(cluster.size());
+        cluster_sizes.push_back(cluster.size());
     }
 
-    // 设置高斯核函数带宽
-    double sum = 0.0;
-    double sum_squared = 0.0;
-    int n = cluster_set.size();
+    // 2. 计算高斯核带宽
+    double bandwidth = 1.05 * std::sqrt(std::accumulate(cluster_sizes.begin(), cluster_sizes.end(), 0.0, [](double sum, int size) {
+        return sum + size * size;
+        }) / cluster_sizes.size() - std::pow(std::accumulate(cluster_sizes.begin(), cluster_sizes.end(), 0.0) / cluster_sizes.size(), 2))
+        * std::pow(cluster_sizes.size(), -1.0 / 5);
 
-    // 计算标准差
-    for (int size : cluster_set) {
-        sum += size;
-        sum_squared += size * size;
-    }
-
-    double mean = sum / n;
-    double variance = (sum_squared / n) - (mean * mean);
-    double std_dev = sqrt(variance);
-
-    double bandwidth = 1.05 * std_dev * pow(n, -1.0 / 5.0);
-
-    // 设置 x_array 的范围
-    double min_val = *min_element(cluster_set.begin(), cluster_set.end());
-    double max_val = *max_element(cluster_set.begin(), cluster_set.end());
-
+    // 3. 计算核密度估计
     vector<double> x_array;
     vector<double> y_array;
+    int min_size = *std::min_element(cluster_sizes.begin(), cluster_sizes.end());
+    int max_size = *std::max_element(cluster_sizes.begin(), cluster_sizes.end());
 
-    // 生成 x_array 和对应的 y_array
-    for (double x = min_val; x <= max_val; x += (max_val - min_val) / 180) {
+    for (double x = min_size; x <= max_size; x += (max_size - min_size) / 180.0) {
         x_array.push_back(x);
-        y_array.push_back(get_kde(x, cluster_set, bandwidth));
+        y_array.push_back(getKde(x, cluster_sizes, bandwidth));
     }
 
-    // 计算最大值及其对应的 x 值
-    auto max_it = max_element(y_array.begin(), y_array.end());
-    int max_idx = distance(y_array.begin(), max_it);
-    double max_x = x_array[max_idx];
-    double max_y = *max_it;
+    /*
+    // 4. 绘制直方图
+    auto h = bar(linspace(min_size, max_size, cluster_sizes.size()), cluster_sizes);
+    title("聚类直方图与核函数密度估计");
+    xlabel("聚类大小");
+    ylabel("概率");
 
-    //matplotlibcpp绘图
-    return max_x;
+    // 5. 绘制核密度估计曲线，确保传入正确的类型
+    // 如果需要设置样式，可以这样：
+    plot(x_array, y_array, "r-"); // 红色线条
+
+    // 6. 找到核函数密度曲线的极值点
+    auto max_idx = std::max_element(y_array.begin(), y_array.end()) - y_array.begin();
+    vector<double> max_x = { x_array[max_idx] };
+    vector<double> max_y = { y_array[max_idx] };
+    vector<double> red_color = { 1.0, 0.0, 0.0 };  // 红色
+    scatter(max_x, max_y, 50, red_color);  // 散点图
+
+    // 7. 添加图例
+    vector<string> legend_labels = { "高斯核估计概率密度曲线", "概率密度极值点" };
+    matplot::legend(legend_labels);
+
+    // 8. 保存图像
+    save(convertPath(filename));*/
+
+    auto max_idx = std::max_element(y_array.begin(), y_array.end()) - y_array.begin();
+    vector<double> max_x = { x_array[max_idx] };
+    vector<double> max_y = { y_array[max_idx] };
+
+    return x_array[max_idx]; // 返回最大值的 x 坐标
 }
 
-void saveHistogram(vector<vector<Point>>& clusters, string filename) {
-    size_t count = clusters.size(); // 初分割聚类滤去小聚类后，所含的聚类数目
-    cout << "过滤后聚类数目：" << count << endl;
 
-    //绘制聚类所含像素点数目分布直方图
+// 保存聚类直方图的函数
+void saveClusterHistogram(vector<vector<cv::Point>>& clusters, string filename) {
+    size_t count = clusters.size(); // 初分割聚类滤去小聚类后，所含的聚类数目
+    std::cout << "过滤后聚类数目：" << count << endl;
+
     // 1. 计算每个聚类的大小
     std::vector<int> clusterSizes;
     for (const auto& cluster : clusters) {
         clusterSizes.push_back(cluster.size());
     }
 
-    // 2. 计算直方图
+    // 2. 设置 bin 大小，横轴以 200 为一个刻度
+    int binSize = 200;
     int maxSize = *std::max_element(clusterSizes.begin(), clusterSizes.end());
-    int minSize = *std::min_element(clusterSizes.begin(), clusterSizes.end());
-    //int maxValue = *std::max_element(clusterSizes.begin(), clusterSizes.end());     //所有聚类中的最多像素点个数
-    int numBins = 30;
-    int binSize = (maxSize + 30 - 1) / 30;     //直方图横坐标分为30等份，binWidth为每一等份的大小
-    //std::vector<int> histogram(binSize, 0);
+    int numBins = (maxSize / binSize) + 1; // 计算需要多少个 bin
 
-    // 创建直方图数组
+    // 3. 计算每个 bin 中的聚类数目
     std::vector<int> histogram(numBins, 0);
-
-    // 填充直方图
-    for (int value : clusterSizes) {
-        histogram[value / binSize]++;
+    for (int size : clusterSizes) {
+        int binIndex = size / binSize; // 根据大小确定每个聚类属于哪个 bin
+        histogram[binIndex]++;
     }
 
-    // 3.创建绘图图像
-    int histWidth = 600;
-    int histHeight = 400;
-    cv::Mat histImage(histHeight, histWidth, CV_8UC3, cv::Scalar(255, 255, 255));   //白底
+    // 4. 使用 matplot++ 绘制直方图
+    auto h = linspace(0, (numBins - 1), numBins);  // 横轴为 0 到 numBins-1
+    auto x = bar(h, histogram);                    // 绘制直方图，Y 轴为 histogram 中的聚类数目
+    x->bar_width(0.8);                             // 设置柱形图的宽度
 
-    // 4.绘制直方图
-    cout << "histWidth:" << histWidth << ", histogram size:" << histogram.size() << endl;
-    int binWidth = cvRound((double)histWidth / 30);        //直方图中，每一等份在图像上的长度，这里是：600/30=20
-    cout << "binWidth:" << binWidth << endl;
-    for (size_t i = 0; i < histogram.size(); i++) {
-        cv::rectangle(histImage,
-                      cv::Point(i * binWidth, histHeight),
-                      cv::Point((i + 1) * binWidth, histHeight - histogram[i]),
-                      cv::Scalar(0, 0, 255), cv::FILLED);
+    // 设置横轴的位置
+    vector<double> xticks(numBins);
+    for (int i = 0; i < numBins; ++i) {
+        xticks[i] = i * binSize;  // 每个 bin 的开始位置
     }
+    matplot::xticks(xticks); // 设置横轴的刻度位置
 
-    // 5.添加标签
-    cv::putText(histImage, "Cluster Size", cv::Point(histWidth / 2 - 50, histHeight - 10),
-                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
-    cv::putText(histImage, "Count", cv::Point(10, 20),
-                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0), 1);
+    // 设置横轴标签为 200 的倍数
+    vector<string> xlabels(numBins);
+    for (int i = 0; i < numBins; ++i) {
+        xlabels[i] = to_string(i * binSize); // 设置横轴标签为 200 * n
+    }
+    matplot::xticklabels(xlabels); // 设置横轴标签
 
-    // 保存图像
-    cv::imwrite(filename, histImage);
+    // 添加标题和标签
+    matplot::title("聚类直方图（预分割滤去小聚类后）");
+    matplot::xlabel("聚类大小");
+    matplot::ylabel("聚类数目");
+
+    // 保存图像为文件
+    matplot::save(convertPath(filename));
 }
+
 
 /*参数列表：
 *   clusters1: 一个二维向量，表示聚类结果。每个聚类包含一组Point对象。
@@ -170,17 +205,17 @@ void visualizeClusters(const vector<vector<Point>>& clusters1, size_t count, int
             }
 
             // 3. 保存单个聚类图像和掩模
-            imwrite(resultFolder + "\\pre\\dyed\\" + name + "_cluster_" + to_string(NUM) + "_cnt_" + to_string(F) + ".png", img_single_rgb);
+            cv::imwrite(resultFolder + "\\pre\\dyed\\" + name + "_cluster_" + to_string(NUM) + "_cnt_" + to_string(F) + ".png", img_single_rgb);
         }
         NUM++;
-        imwrite(resultFolder +"\\pre\\segment\\" + name +"_segment" + ".png", mask);
+        cv::imwrite(resultFolder +"\\pre\\segment\\" + name +"_segment" + ".png", mask);
     }
 
     // 4. 保存所有聚类的图像和输出信息
-    imwrite(resultFolder + +"\\pre\\dyed_segment\\" + name + "_pre_segment" + ".png", img_rgb);
+    cv::imwrite(resultFolder + "\\pre\\dyed_segment\\" + name + "_pre_segment" + ".png", img_rgb);
 
 
-    cout << "获得纤维预分割聚类染色图" << endl;
+    std::cout << "获得纤维预分割聚类染色图" << endl;
 }
 
 vector<vector<Point>> visualize(vector<vector<Point>>& clusters, string resultFolder,string name, double resolution, int height, int width) {
@@ -193,12 +228,12 @@ vector<vector<Point>> visualize(vector<vector<Point>>& clusters, string resultFo
             filtered_clusters.push_back(cluster);
         }
     }
-    cout << "过滤前聚类数：" << clusters.size() << "，过滤后聚类数：" << filtered_clusters.size() << endl;
+    std::cout << "过滤前聚类数：" << clusters.size() << "，过滤后聚类数：" << filtered_clusters.size() << endl;
 
     vector<vector<Point>>clusters1 = filtered_clusters; // 用于初分割聚类染色
     size_t count = filtered_clusters.size();
 
-    saveHistogram(filtered_clusters, resultFolder + "\\pre\\histogram\\" + name + "_histogram.png");        //聚类所含像素点数目分布直方图
+    saveClusterHistogram(filtered_clusters, resultFolder + "\\pre\\histogram\\" + name + "_histogram.png");        //聚类所含像素点数目分布直方图
     //聚类染色图（待补充）
     visualizeClusters(clusters1, count, height, width, resultFolder, name);
     return filtered_clusters;
@@ -217,9 +252,9 @@ double calculateSSIM(const cv::Mat& image1, const cv::Mat& image2, Mat& diff) {
     Mat image1_2 = validImage1.mul(validImage2);
 
     Mat gausBlur1, gausBlur2, gausBlur12;
-    GaussianBlur(validImage1, gausBlur1, Size(11, 11), 1.5); //高斯卷积核计算图像均值
-    GaussianBlur(validImage2, gausBlur2, Size(11, 11), 1.5);
-    GaussianBlur(image1_2, gausBlur12, Size(11, 11), 1.5);
+    cv::GaussianBlur(validImage1, gausBlur1, Size(11, 11), 1.5); //高斯卷积核计算图像均值
+    cv::GaussianBlur(validImage2, gausBlur2, Size(11, 11), 1.5);
+    cv::GaussianBlur(image1_2, gausBlur12, Size(11, 11), 1.5);
 
     Mat imageAvgProduct = gausBlur1.mul(gausBlur2); //均值乘积
     Mat u1Squre = gausBlur1.mul(gausBlur1); //各自均值的平方
@@ -227,8 +262,8 @@ double calculateSSIM(const cv::Mat& image1, const cv::Mat& image2, Mat& diff) {
 
     Mat imageConvariance, imageVariance1, imageVariance2;
     Mat squreAvg1, squreAvg2;
-    GaussianBlur(image1_1, squreAvg1, Size(11, 11), 1.5); //图像平方的均值
-    GaussianBlur(image2_2, squreAvg2, Size(11, 11), 1.5);
+    cv::GaussianBlur(image1_1, squreAvg1, Size(11, 11), 1.5); //图像平方的均值
+    cv::GaussianBlur(image2_2, squreAvg2, Size(11, 11), 1.5);
 
     imageConvariance = gausBlur12 - gausBlur1.mul(gausBlur2);// 计算协方差
     imageVariance1 = squreAvg1 - gausBlur1.mul(gausBlur1); //计算方差
@@ -238,8 +273,8 @@ double calculateSSIM(const cv::Mat& image1, const cv::Mat& image2, Mat& diff) {
     auto denominator = ((u1Squre + u2Squre + C1).mul(imageVariance1 + imageVariance2 + C2));
 
     Mat ssim_map;
-    divide(member, denominator, ssim_map);
-    return mean(ssim_map)[0]; // 返回均值
+    cv::divide(member, denominator, ssim_map);
+    return cv::mean(ssim_map)[0]; // 返回均值
 }
 
 double ouputSSIMResult(string beforePath, string afterPath, string resultFolder, string name, bool compare) {

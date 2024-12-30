@@ -18,13 +18,14 @@ struct SSIMResult {
 };
 
 vector<vector<Point>> visualize(vector<vector<Point>>& clusters, string resultFolder, string name, double resolution, int height, int width);
-void saveHistogram(vector<vector<Point>>& clusters, string filename);
+void saveClusterHistogram(vector<vector<Point>>& clusters, string filename);
 void visualizeClusters(const vector<vector<Point>>& clusters1, size_t count, int height, int width, string& resultFolder, const string& name);
 double ouputSSIMResult(string beforePath, string afterPath, string resultFolder, string name, bool compare);
 double calculateSSIM(const cv::Mat& img1, const cv::Mat& img2, Mat& diff);
 double gauss(double x);
-double get_kde(double x, vector<double>& data_array, double bandwidth);
-double saveKde(vector<vector<Point>>& clusters);
+double getKde(double x, const vector<int>& data_array, double bandwidth);
+double saveKde(vector<vector<Point>>& clusters, const string& filename);
 vector<vector<Point>> deepcopyClusters(const vector<vector<Point>>& clusters);
+string convertPath(const string& path);
 
 #endif // VISUALIZE_H

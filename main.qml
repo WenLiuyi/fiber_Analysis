@@ -209,16 +209,23 @@ Window {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 230
 
-                    TextArea{
-                        id:logArea
-                        anchors.fill: parent
-                        readOnly: true
+                    ScrollView {
+                        width: parent.width
+                        height: parent.height
 
-                        background: Rectangle {
-                            border.color: "#B0B0B0"
-                            radius: 3
+                        TextArea {
+                            id: logArea
+                            anchors.fill: parent
+                            readOnly: true
+
+                            background: Rectangle {
+                                border.color: "#B0B0B0"
+                                radius: 3
+                            }
                         }
                     }
+
+                    
                     Connections{
                         target:runner
                         onMessageChanged:{           // Á¬½ÓrunnerµÄupdate
