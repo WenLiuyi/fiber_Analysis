@@ -2,7 +2,8 @@
 
 ## 1. UI设计
 
-![8b0048360185445c820aca797367819c](file:///C:/Users/16584/Pictures/Typedown/8b004836-0185-445c-820a-ca797367819c.png?msec=1735619333137)
+![8b0048360185445c820aca797367819c](https://github.com/user-attachments/assets/78076aa2-45b1-4fa1-b40e-e7f78b0685cd)
+
 
 ### 1.1 主操作区
 
