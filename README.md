@@ -7,7 +7,8 @@
 
 ### 1.1 主操作区
 
-![f2a2f934c1764b22a2153c421a684b03](file:///C:/Users/16584/Pictures/Typedown/f2a2f934-c176-4b22-a215-3c421a684b03.png?msec=1735619655813)
+![f2a2f934c1764b22a2153c421a684b03](https://github.com/user-attachments/assets/73a07e1b-91bb-4575-8a97-7093b8bf544b)
+
 
 1. **Back，To**分别控制目录树的前进与回退；
 
@@ -21,17 +22,19 @@
   
   * 注：两栏均需选择文件夹。
 
-![490d4959000a4d6d80b9dfb68b726b8c](file:///C:/Users/16584/Pictures/Typedown/490d4959-000a-4d6d-80b9-dfb68b726b8c.png?msec=1735619817564)
+![490d4959000a4d6d80b9dfb68b726b8c](https://github.com/user-attachments/assets/1a277ba4-b8ca-474d-a529-dddbc6700d5c)
+
 
 操作示例：
 
     点击选择按钮，选中对应文件夹，点击”确定“；
 
-![28aa858c9f8e41b18bb8c302a0fd6f56](file:///C:/Users/16584/Pictures/Typedown/28aa858c-9f8e-41b1-8bb8-c302a0fd6f56.png?msec=1735619934408)
+
 
 ### 1.3 参数区
 
-![393c93118aba4971823759ec8d17ef3f](file:///C:/Users/16584/Pictures/Typedown/393c9311-8aba-4971-8237-59ec8d17ef3f.png?msec=1735620023876)
+![393c93118aba4971823759ec8d17ef3f](https://github.com/user-attachments/assets/32aa2e51-ef16-411e-ac57-aff81854b376)
+
 
 参数含义如下：
 
@@ -46,7 +49,8 @@
   
   * 若未输入参数，或参数格式不符合要求，点击**Start**时，会跳出错误提示。
 
-![ba97ccc9e5cc4e7b957fc8ddfce26fc6](file:///C:/Users/16584/Pictures/Typedown/ba97ccc9-e5cc-4e7b-957f-c8ddfce26fc6.png?msec=1735620238196)
+  ![ba97ccc9e5cc4e7b957fc8ddfce26fc6](https://github.com/user-attachments/assets/85c9d3b3-3d57-45eb-85b3-2caebe0f6d3a)
+
 
 ### 1.4 目录树
 
@@ -54,13 +58,15 @@
 
 * 文件夹对应项显示黑色，其他格式对应项显示灰色；
   
-  * ![c1af0ca51131480f801269bca134c425](file:///C:/Users/16584/Pictures/Typedown/c1af0ca5-1131-480f-8012-69bca134c425.png?msec=1735620904020)
+  * ![c1af0ca51131480f801269bca134c425](https://github.com/user-attachments/assets/1b176fd9-c742-4bad-9ce2-1f5069a79a83)
+
 
 * 可通过**Back，To**操控前进或后退；
   
   * 单击某项，该项被选中，边框变蓝，此时点击**To**，若该项为文件夹，跳转至相应文件夹下；
     
-    * ![7a3ed8ee83914b8c966d9f5e558d54e6](file:///C:/Users/16584/Pictures/Typedown/7a3ed8ee-8391-4b8c-966d-9f5e558d54e6.png?msec=1735620820266)
+    * ![7a3ed8ee83914b8c966d9f5e558d54e6](https://github.com/user-attachments/assets/cd1cd9fd-3352-4406-899d-86e10e3901f2)
+
   
   * 双击某项，若该项为文件夹，跳转至相应文件夹下；
   
@@ -68,7 +74,8 @@
   
   * 光标停留在某项，若该文件名称超出边框，会突出显示其全名；
     
-    * ![3769c83b743641129fcc1ce0071ac1d4](file:///C:/Users/16584/Pictures/Typedown/3769c83b-7436-4112-9fcc-1ce0071ac1d4.png?msec=1735620729645)
+    * ![3769c83b743641129fcc1ce0071ac1d4](https://github.com/user-attachments/assets/e615eabf-7179-47e0-8e53-453da90f112a)
+
 
 * 选择图片路径、输出路径时，目录树会跳转至相应文件夹下；
 
@@ -80,17 +87,20 @@
 
 * 查看txt文本：
   
-  * ![17eed7cce21c473aaa8f2bb10af887a8](file:///C:/Users/16584/Pictures/Typedown/17eed7cc-e21c-473a-aa8f-2bb10af887a8.png?msec=1735621034831)
+  * ![17eed7cce21c473aaa8f2bb10af887a8](https://github.com/user-attachments/assets/7b48c0f8-53dc-4204-be73-87e35fa089f3)
+
 
 * 查看png图片：
   
-  * ![ba4f40b274344afebd31b6b8f8e293a5](file:///C:/Users/16584/Pictures/Typedown/ba4f40b2-7434-4afe-bd31-b6b8f8e293a5.png?msec=1735621143787)
+  * ![ba4f40b274344afebd31b6b8f8e293a5](https://github.com/user-attachments/assets/7a145323-96df-49d6-abbb-e6af0ce24148)
+
 
 ### 1.6 命令行区
 
 展示处理流程，可滑动查看
 
-![6d23d92665b9419c8a44e3b86056c981](file:///C:/Users/16584/Pictures/Typedown/6d23d926-65b9-419c-8a44-e3b86056c981.png?msec=1735621218038)
+![6d23d92665b9419c8a44e3b86056c981](https://github.com/user-attachments/assets/af403be0-cb41-4ecd-9b36-9dddaf49c6ce)
+
 
 ### 1.7 工作区
 
